@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FolderGit2,
@@ -11,6 +12,8 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-zinc-800 bg-zinc-950 text-white">
 
@@ -36,7 +39,11 @@ export default function Sidebar() {
           {/* Dashboard */}
           <Link
             href="/"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ${
+              pathname === "/"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            }`}
           >
             <LayoutDashboard className="h-4 w-4" />
             <span>Dashboard</span>
@@ -45,7 +52,11 @@ export default function Sidebar() {
           {/* Repositories */}
           <Link
             href="/repositories"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+              pathname === "/repositories"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            }`}
           >
             <FolderGit2 className="h-4 w-4" />
             <span>Repositories</span>
@@ -63,7 +74,11 @@ export default function Sidebar() {
           {/* Architecture */}
           <Link
             href="/architecture"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+              pathname === "/architecture"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            }`}
           >
             <Network className="h-4 w-4" />
             <span>Architecture</span>
@@ -72,7 +87,11 @@ export default function Sidebar() {
           {/* AI Chat */}
           <Link
             href="/ai-chat"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+              pathname === "/ai-chat"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            }`}
           >
             <MessageSquare className="h-4 w-4" />
             <span>AI Chat</span>
@@ -81,7 +100,11 @@ export default function Sidebar() {
           {/* Analysis */}
           <Link
             href="/analysis"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+              pathname === "/analysis"
+                ? "bg-zinc-800 text-white"
+                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+            }`}
           >
             <BarChart3 className="h-4 w-4" />
             <span>Analysis</span>
@@ -97,7 +120,11 @@ export default function Sidebar() {
         {/* Settings */}
         <Link
           href="/settings"
-          className="mb-3 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
+          className={`mb-3 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm ${
+            pathname === "/settings"
+              ? "bg-zinc-800 text-white"
+              : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+          }`}
         >
           <Settings className="h-4 w-4" />
           <span>Settings</span>
