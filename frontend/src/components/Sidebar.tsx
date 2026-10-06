@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import {
   LayoutDashboard,
   FolderGit2,
@@ -11,8 +11,6 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
-  const [activePage, setActivePage] = useState("Dashboard");
-
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-zinc-800 bg-zinc-950 text-white">
 
@@ -36,30 +34,22 @@ export default function Sidebar() {
         <div className="space-y-1">
 
           {/* Dashboard */}
-          <button
-            onClick={() => setActivePage("Dashboard")}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium ${
-              activePage === "Dashboard"
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-            }`}
+          <Link
+            href="/"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-zinc-900 hover:text-white"
           >
             <LayoutDashboard className="h-4 w-4" />
             <span>Dashboard</span>
-          </button>
+          </Link>
 
           {/* Repositories */}
-          <button
-            onClick={() => setActivePage("Repositories")}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${
-              activePage === "Repositories"
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-            }`}
+          <Link
+            href="/repositories"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
           >
             <FolderGit2 className="h-4 w-4" />
             <span>Repositories</span>
-          </button>
+          </Link>
 
         </div>
 
@@ -71,43 +61,31 @@ export default function Sidebar() {
         <div className="space-y-1">
 
           {/* Architecture */}
-          <button
-            onClick={() => setActivePage("Architecture")}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${
-              activePage === "Architecture"
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-            }`}
+          <Link
+            href="/architecture"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
           >
             <Network className="h-4 w-4" />
             <span>Architecture</span>
-          </button>
+          </Link>
 
           {/* AI Chat */}
-          <button
-            onClick={() => setActivePage("AI Chat")}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${
-              activePage === "AI Chat"
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-            }`}
+          <Link
+            href="/ai-chat"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
           >
             <MessageSquare className="h-4 w-4" />
             <span>AI Chat</span>
-          </button>
+          </Link>
 
           {/* Analysis */}
-          <button
-            onClick={() => setActivePage("Analysis")}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${
-              activePage === "Analysis"
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-            }`}
+          <Link
+            href="/analysis"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
           >
             <BarChart3 className="h-4 w-4" />
             <span>Analysis</span>
-          </button>
+          </Link>
 
         </div>
 
@@ -117,17 +95,13 @@ export default function Sidebar() {
       <div className="border-t border-zinc-800 p-4">
 
         {/* Settings */}
-        <button
-          onClick={() => setActivePage("Settings")}
-          className={`mb-3 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${
-            activePage === "Settings"
-              ? "bg-zinc-800 text-white"
-              : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-          }`}
+        <Link
+          href="/settings"
+          className="mb-3 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-white"
         >
           <Settings className="h-4 w-4" />
           <span>Settings</span>
-        </button>
+        </Link>
 
         {/* User */}
         <div className="rounded-lg bg-zinc-900 p-3">
