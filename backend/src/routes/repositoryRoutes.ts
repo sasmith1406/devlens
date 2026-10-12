@@ -1,12 +1,37 @@
 
 import { Router } from "express";
+import { Prisma } from "../generated/prisma/client.js";
+import { prisma } from "../lib/prisma.js";
 
 const router = Router();
 
-router.post("/", (req, res) => {
+// GET /api/repositories
+// Retrieve all repositories saved in PostgreSQL
+router.get("/", async (_req, res) => {
+  try {
+    const repositories = await prisma.repository.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json({
+      success: true,
+      repositories,
+    });
+  } catch (error) {
+    console.error("Failed to fetch repositories:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to fetch repositories.",
+    });
+  }
+});
+
+// POST /api/repositories
+// Validate a GitHub URL and save the repository
+router.post("/", async (req, res) => {
   const { url } = req.body;
 
-  // Check that a URL was provided
   if (typeof url !== "string" || !url.trim()) {
     return res.status(400).json({
       success: false,
@@ -14,7 +39,6 @@ router.post("/", (req, res) => {
     });
   }
 
-  // Parse the URL safely
   let parsedUrl: URL;
 
   try {
@@ -26,12 +50,12 @@ router.post("/", (req, res) => {
     });
   }
 
-  // Only accept GitHub repository URLs
   if (
     parsedUrl.protocol !== "https:" ||
-    parsedUrl.hostname !== "github.com" ||
+    parsedUrl.hostname.toLowerCase() !== "github.com" ||
     parsedUrl.username ||
-    parsedUrl.password
+    parsedUrl.password ||
+    parsedUrl.port
   ) {
     return res.status(400).json({
       success: false,
@@ -46,36 +70,64 @@ router.post("/", (req, res) => {
     pathParts.some((part) => part === "." || part === "..") ||
     !/^[a-zA-Z0-9_.-]+$/.test(pathParts[0]) ||
     !/^[a-zA-Z0-9_.-]+$/.test(pathParts[1]) ||
-    pathParts[0] === "." ||
-    pathParts[1] === "." ||
-    pathParts[0] === ".." ||
-    pathParts[1] === ".."
+    pathParts.some((part) => part === "." || part === "..")
   ) {
     return res.status(400).json({
       success: false,
-      message: "URL must point to a GitHub repository, such as https://github.com/owner/repo",
+      message:
+        "URL must point to a GitHub repository, such as https://github.com/owner/repo",
     });
   }
 
   const owner = pathParts[0];
-  const repository = pathParts[1].replace(/\.git$/i, "");
+  const name = pathParts[1].replace(/\.git$/i, "");
 
-  if (!repository) {
+  if (
+    !name ||
+    name === "." ||
+    name === ".." ||
+    !/^[a-zA-Z0-9_-]+(?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?$/.test(name)
+  ) {
     return res.status(400).json({
       success: false,
-      message: "Repository name is required",
+      message: "Please provide a valid repository name",
     });
   }
 
-  return res.json({
-    success: true,
-    message: "Repository URL accepted",
-    repository: {
-      owner,
-      name: repository,
-      url: `https://github.com/${owner}/${repository}`,
-    },
-  });
+  const canonicalUrl = `https://github.com/${owner}/${name}`;
+
+  try {
+    const repository = await prisma.repository.create({
+      data: {
+        owner,
+        name,
+        url: canonicalUrl,
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Repository saved successfully",
+      repository,
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: "This repository has already been added.",
+      });
+    }
+
+    console.error("Failed to save repository:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to save repository. Please try again.",
+    });
+  }
 });
 
 export default router;
