@@ -17,6 +17,25 @@ type Repository = {
   createdAt: string;
 };
 
+
+type RepositoryFile = {
+  path: string;
+  type: string;
+  sha: string;
+  size?: number;
+};
+
+type RepositoryTree = {
+  repository: {
+    id: number;
+    owner: string;
+    name: string;
+    defaultBranch: string;
+  };
+  entries: RepositoryFile[];
+  truncated: boolean;
+};
+
 export default function RepositoriesPage() {
   
 const [isOpen, setIsOpen] = useState(false);
@@ -25,6 +44,15 @@ const [repositories, setRepositories] = useState<Repository[]>([]);
 const [error, setError] = useState("");
 const [isLoading, setIsLoading] = useState(false);
 const [isFetching, setIsFetching] = useState(true);
+const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
+const [repositoryTree, setRepositoryTree] = useState<RepositoryTree | null>(null);
+const [isTreeLoading, setIsTreeLoading] = useState(false);
+const [treeError, setTreeError] = useState("");
+const [selectedFilePath, setSelectedFilePath] = useState("");
+const [fileContent, setFileContent] = useState("");
+const [isFileLoading, setIsFileLoading] = useState(false);
+const [fileError, setFileError] = useState("");
+
 
 async function fetchRepositories() {
   setIsFetching(true);
@@ -52,6 +80,66 @@ async function fetchRepositories() {
     setIsFetching(false);
   }
 }
+
+async function fetchRepositoryTree(repo: Repository) {
+  setSelectedRepo(repo);
+  setRepositoryTree(null);
+  setTreeError("");
+  setIsTreeLoading(true);
+
+  try {
+    const response = await fetch(
+      `http://localhost:5000/api/repositories/${repo.id}/files`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to fetch repository files.");
+    }
+
+    setRepositoryTree({
+      repository: data.repository,
+      entries: data.entries,
+      truncated: data.truncated,
+    });
+  } catch (err) {
+    setTreeError(
+      err instanceof Error
+        ? err.message
+        : "Something went wrong while fetching repository files."
+    );
+  } finally {
+    setIsTreeLoading(false);
+  }
+}
+
+const fetchFileContent = async (repo: Repository, path: string) => {
+  setSelectedFilePath(path);
+  setFileContent("");
+  setFileError("");
+  setIsFileLoading(true);
+
+  try {
+    const response = await fetch(
+      `http://localhost:5000/api/repositories/${repo.id}/files/content?path=${encodeURIComponent(path)}`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to load file content.");
+    }
+
+    setFileContent(data.file.content);
+  } catch (error) {
+    setFileError(
+      error instanceof Error ? error.message : "Something went wrong."
+    );
+  } finally {
+    setIsFileLoading(false);
+  }
+};
 
 useEffect(() => {
   void fetchRepositories();
@@ -196,12 +284,108 @@ async function handleConnect() {
               View
               <ExternalLink className="h-4 w-4" />
             </a>
+            <button
+  onClick={() => void fetchRepositoryTree(repo)}
+  className="rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-200 transition hover:bg-gray-800"
+>
+  Explore files
+</button>
           </div>
         </div>
       ))}
     </div>
   )}
 </section>
+
+      {/* Repository File Explorer */}
+      {selectedRepo && (
+        <section className="mt-8 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+          <h2 className="text-xl font-semibold text-white">
+            Files in {selectedRepo.owner}/{selectedRepo.name}
+          </h2>
+
+          {isTreeLoading && (
+            <p className="mt-4 text-sm text-zinc-400">
+              Loading repository files...
+            </p>
+          )}
+
+          {treeError && (
+            <p className="mt-4 text-sm text-red-400">
+              {treeError}
+            </p>
+          )}
+
+          {repositoryTree && (
+            <div className="mt-4 space-y-2">
+              <p className="mb-3 text-sm text-zinc-400">
+                {repositoryTree.entries.length} entries found
+              </p>
+
+              {repositoryTree.entries.map((file) => (
+                <div
+  key={file.path}
+  onClick={() => {
+    if (file.type === "blob" && selectedRepo) {
+      void fetchFileContent(selectedRepo, file.path);
+    }
+  }}
+  className={`flex items-center justify-between gap-4 rounded-lg border border-zinc-800 px-4 py-3 ${
+    file.type === "blob"
+      ? "cursor-pointer transition hover:bg-zinc-800"
+      : ""
+  }`}
+>
+  <span className="break-all text-sm text-zinc-200">
+    {file.type === "tree" ? "📁" : "📄"} {file.path}
+  </span>
+
+  <span className="shrink-0 text-xs text-zinc-500">
+    {file.type}
+  </span>
+</div>
+              ))}
+
+              {repositoryTree.truncated && (
+                <p className="pt-2 text-sm text-amber-400">
+                  GitHub returned a truncated file tree. Some entries may be missing.
+                </p>
+              )}
+            </div>
+          )}
+          {/* Selected File Content */}
+{selectedFilePath && (
+  <div className="mt-6 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950">
+    <div className="border-b border-zinc-800 px-4 py-3">
+      <h3 className="text-sm font-semibold text-white">
+        {selectedFilePath}
+      </h3>
+    </div>
+
+    <div className="p-4">
+      {isFileLoading && (
+        <p className="text-sm text-zinc-400">
+          Loading file content...
+        </p>
+      )}
+
+      {fileError && (
+        <p className="text-sm text-red-400">
+          {fileError}
+        </p>
+      )}
+
+      {!isFileLoading && !fileError && (
+        <pre className="overflow-x-auto whitespace-pre-wrap break-words text-sm leading-6 text-zinc-300">
+          <code>{fileContent}</code>
+        </pre>
+      )}
+    </div>
+  </div>
+)}
+        </section>
+      )}
+
 
 
       {/* Newly accepted repository */}
