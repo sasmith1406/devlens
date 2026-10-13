@@ -27,6 +27,133 @@ router.get("/", async (_req, res) => {
   }
 });
 
+
+
+/* GET /api/repositories/:id/files
+   Fetch the file and folder structure of a saved GitHub repository. */
+router.get("/:id/files", async (req, res) => {
+  const id = Number(req.params.id);
+
+  // Validate the repository ID.
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid repository ID.",
+    });
+  }
+
+  try {
+    // Find the repository saved in PostgreSQL.
+    const repository = await prisma.repository.findUnique({
+      where: { id },
+    });
+
+    if (!repository) {
+      return res.status(404).json({
+        success: false,
+        message: "Repository not found in DevLens.",
+      });
+    }
+
+    const headers = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "DevLens",
+    };
+
+    // Get the repository's default branch from GitHub.
+    const repoResponse = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.name)}`,
+      {
+        headers,
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+
+    if (repoResponse.status === 404) {
+      return res.status(404).json({
+        success: false,
+        message: "GitHub repository was not found or is not publicly accessible.",
+      });
+    }
+
+    if (repoResponse.status === 403 || repoResponse.status === 429) {
+      return res.status(503).json({
+        success: false,
+        message: "GitHub rate limit reached or access was restricted.",
+      });
+    }
+
+    if (!repoResponse.ok) {
+      return res.status(502).json({
+        success: false,
+        message: "Unable to retrieve repository details from GitHub.",
+      });
+    }
+
+    const repoData = (await repoResponse.json()) as {
+      default_branch: string;
+    };
+
+    // Fetch the complete file tree for the default branch.
+    const treeResponse = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.name)}/git/trees/${encodeURIComponent(repoData.default_branch)}?recursive=1`,
+      {
+        headers,
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+
+    if (treeResponse.status === 403 || treeResponse.status === 429) {
+      return res.status(503).json({
+        success: false,
+        message: "GitHub rate limit reached or access was restricted.",
+      });
+    }
+
+    if (!treeResponse.ok) {
+      return res.status(502).json({
+        success: false,
+        message: "Unable to retrieve the repository file tree.",
+      });
+    }
+
+    const treeData = (await treeResponse.json()) as {
+      truncated: boolean;
+      tree: Array<{
+        path: string;
+        type: string;
+        sha: string;
+        size?: number;
+      }>;
+    };
+
+    return res.json({
+      success: true,
+      repository: {
+        id: repository.id,
+        owner: repository.owner,
+        name: repository.name,
+        defaultBranch: repoData.default_branch,
+      },
+      truncated: treeData.truncated,
+      entries: treeData.tree.map((entry) => ({
+        path: entry.path,
+        type: entry.type,
+        sha: entry.sha,
+        ...(entry.size !== undefined ? { size: entry.size } : {}),
+      })),
+    });
+  } catch (error) {
+    console.error("Failed to fetch repository file tree:", error);
+
+    return res.status(502).json({
+      success: false,
+      message: "Unable to connect to GitHub or retrieve the file tree.",
+    });
+  }
+});
+
+
 // POST /api/repositories
 // Validate, verify, and save a GitHub repository
 router.post("/", async (req, res) => {
