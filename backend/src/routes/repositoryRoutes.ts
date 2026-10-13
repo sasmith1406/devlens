@@ -154,6 +154,150 @@ router.get("/:id/files", async (req, res) => {
 });
 
 
+/* GET /api/repositories/:id/files/content?path=... 
+   Fetch the contents of a specific file from GitHub. */
+router.get("/:id/files/content", async (req, res) => {
+  const id = Number(req.params.id);
+  const filePath = req.query.path;
+
+  // Validate the repository ID.
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid repository ID.",
+    });
+  }
+
+  // Validate the requested file path.
+  if (
+    typeof filePath !== "string" ||
+    !filePath.trim() ||
+    filePath.length > 1000 ||
+    filePath.startsWith("/") ||
+    filePath.includes("\\") ||
+    filePath.split("/").some(
+      (part) => !part || part === "." || part === "..",
+    )
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Please provide a valid repository file path.",
+    });
+  }
+
+  
+try {
+  // Find the repository saved in PostgreSQL.
+  const repository = await prisma.repository.findUnique({
+    where: { id },
+  });
+
+  if (!repository) {
+    return res.status(404).json({
+      success: false,
+      message: "Repository not found in DevLens.",
+    });
+  }
+
+  
+const headers = {
+  Accept: "application/vnd.github+json",
+  "User-Agent": "DevLens",
+};
+
+// Request the selected file from GitHub.
+const githubResponse = await fetch(
+  `https://api.github.com/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.name)}/contents/${filePath.split("/").map(encodeURIComponent).join("/")}`,
+  {
+    headers,
+    signal: AbortSignal.timeout(10000),
+  },
+);
+
+// Handle a file that GitHub cannot find.
+if (githubResponse.status === 404) {
+  return res.status(404).json({
+    success: false,
+    message: "File not found in the GitHub repository.",
+  });
+}
+
+// Handle GitHub rate limits or access restrictions.
+if (
+  githubResponse.status === 403 ||
+  githubResponse.status === 429
+) {
+  return res.status(503).json({
+    success: false,
+    message: "GitHub rate limit reached or access was restricted.",
+  });
+}
+
+// Handle other GitHub errors.
+if (!githubResponse.ok) {
+  return res.status(502).json({
+    success: false,
+    message: "Unable to retrieve file from GitHub.",
+  });
+}
+
+
+const fileData = (await githubResponse.json()) as {
+  type: string;
+  path: string;
+  size: number;
+  encoding: string;
+  content?: string;
+};
+
+// Only allow individual files, not folders or submodules.
+if (fileData.type !== "file") {
+  return res.status(400).json({
+    success: false,
+    message: "The requested path is not a file.",
+  });
+}
+
+// Avoid returning excessively large files.
+if (fileData.size > 500_000) {
+  return res.status(413).json({
+    success: false,
+    message: "File is too large to retrieve.",
+  });
+}
+
+// GitHub normally returns Base64-encoded file contents.
+if (fileData.encoding !== "base64" || !fileData.content) {
+  return res.status(502).json({
+    success: false,
+    message: "GitHub did not return readable file contents.",
+  });
+}
+
+const content = Buffer.from(fileData.content, "base64").toString("utf8");
+
+return res.json({
+  success: true,
+  file: {
+    path: fileData.path,
+    size: fileData.size,
+    content,
+  },
+});
+
+
+} catch (error) {
+  console.error("Failed to fetch file contents:", error);
+
+  return res.status(500).json({
+    success: false,
+    message: "Unable to retrieve file contents.",
+  });
+}
+
+});
+
+
 // POST /api/repositories
 // Validate, verify, and save a GitHub repository
 router.post("/", async (req, res) => {
