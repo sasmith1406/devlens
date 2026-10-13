@@ -28,14 +28,14 @@ router.get("/", async (_req, res) => {
 });
 
 // POST /api/repositories
-// Validate a GitHub URL and save the repository
+// Validate, verify, and save a GitHub repository
 router.post("/", async (req, res) => {
   const { url } = req.body;
 
   if (typeof url !== "string" || !url.trim()) {
     return res.status(400).json({
       success: false,
-      message: "Repository URL is required",
+      message: "Repository URL is required.",
     });
   }
 
@@ -46,7 +46,7 @@ router.post("/", async (req, res) => {
   } catch {
     return res.status(400).json({
       success: false,
-      message: "Please provide a valid URL",
+      message: "Please provide a valid URL.",
     });
   }
 
@@ -59,7 +59,7 @@ router.post("/", async (req, res) => {
   ) {
     return res.status(400).json({
       success: false,
-      message: "Please provide a valid HTTPS GitHub repository URL",
+      message: "Please provide a valid HTTPS GitHub repository URL.",
     });
   }
 
@@ -69,13 +69,12 @@ router.post("/", async (req, res) => {
     pathParts.length !== 2 ||
     pathParts.some((part) => part === "." || part === "..") ||
     !/^[a-zA-Z0-9_.-]+$/.test(pathParts[0]) ||
-    !/^[a-zA-Z0-9_.-]+$/.test(pathParts[1]) ||
-    pathParts.some((part) => part === "." || part === "..")
+    !/^[a-zA-Z0-9_.-]+$/.test(pathParts[1])
   ) {
     return res.status(400).json({
       success: false,
       message:
-        "URL must point to a GitHub repository, such as https://github.com/owner/repo",
+        "URL must point to a GitHub repository, such as https://github.com/owner/repo.",
     });
   }
 
@@ -90,7 +89,54 @@ router.post("/", async (req, res) => {
   ) {
     return res.status(400).json({
       success: false,
-      message: "Please provide a valid repository name",
+      message: "Please provide a valid repository name.",
+    });
+  }
+
+  // Ask GitHub whether the repository exists and is accessible.
+  let githubResponse: Response;
+
+  try {
+    githubResponse = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "User-Agent": "DevLens",
+        },
+        signal: AbortSignal.timeout(5000),
+      },
+    );
+  } catch (error) {
+    console.error("GitHub API request failed:", error);
+
+    return res.status(503).json({
+      success: false,
+      message: "Unable to reach GitHub. Please try again.",
+    });
+  }
+
+  if (githubResponse.status === 404) {
+    return res.status(400).json({
+      success: false,
+      message: "Repository not found or not publicly accessible.",
+    });
+  }
+
+  if (
+    githubResponse.status === 403 ||
+    githubResponse.status === 429
+  ) {
+    return res.status(503).json({
+      success: false,
+      message: "GitHub rate limit reached or access was restricted. Please try again later.",
+    });
+  }
+
+  if (!githubResponse.ok) {
+    return res.status(502).json({
+      success: false,
+      message: "GitHub could not verify this repository.",
     });
   }
 
@@ -107,7 +153,7 @@ router.post("/", async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Repository saved successfully",
+      message: "Repository verified and saved successfully.",
       repository,
     });
   } catch (error) {
@@ -131,3 +177,4 @@ router.post("/", async (req, res) => {
 });
 
 export default router;
+
