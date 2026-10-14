@@ -13,6 +13,27 @@ export default function CodeViewer({
   code,
   filePath,
 }: CodeViewerProps) {
+    const fileName = filePath.split("/").pop() ?? filePath;
+const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+const lineCount = code.split("\n").length;
+const languageLabels: Record<string, string> = {
+  ts: "TypeScript",
+  tsx: "TypeScript JSX",
+  js: "JavaScript",
+  jsx: "JavaScript JSX",
+  json: "JSON",
+  css: "CSS",
+  html: "HTML",
+  md: "Markdown",
+  py: "Python",
+  java: "Java",
+  sql: "SQL",
+  yml: "YAML",
+  yaml: "YAML",
+  sh: "Shell",
+};
+
+const languageLabel = languageLabels[extension] ?? "Plain text";
   const [highlightedCode, setHighlightedCode] = useState("");
   const [isHighlighting, setIsHighlighting] = useState(true);
   const [highlightError, setHighlightError] = useState(false);
@@ -114,6 +135,26 @@ export default function CodeViewer({
 
   return (
   <div className="space-y-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-3">
+  <div className="min-w-0">
+    <p className="truncate text-sm font-medium text-zinc-200">
+      {fileName}
+    </p>
+    <p className="truncate text-xs text-zinc-500">
+      {filePath}
+    </p>
+  </div>
+
+  <div className="flex shrink-0 items-center gap-2">
+    <span className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300">
+      {languageLabel}
+    </span>
+
+    <span className="rounded-md bg-zinc-800 px-2 py-1 text-xs text-zinc-300">
+      {lineCount} {lineCount === 1 ? "line" : "lines"}
+    </span>
+  </div>
+</div>
     <div className="flex justify-end">
       <button
         type="button"
