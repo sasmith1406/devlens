@@ -46,9 +46,20 @@ export default function CodeViewer({
         const language = languageMap[extension ?? ""] ?? "text";
 
         const html = await codeToHtml(code, {
-          lang: language,
-          theme: "github-dark",
-        });
+  lang: language,
+  theme: "github-dark",
+  transformers: [
+    {
+      pre(node) {
+        node.properties.style =
+          "counter-reset: line";
+      },
+      line(node) {
+        node.properties.class = "line";
+      },
+    },
+  ],
+});
 
         if (!cancelled) {
           setHighlightedCode(html);
@@ -89,7 +100,7 @@ export default function CodeViewer({
 
   return (
     <div
-      className="overflow-x-auto text-sm leading-6 [&_pre]:!m-0 [&_pre]:!bg-transparent [&_pre]:!p-0"
+      className="overflow-x-auto text-sm leading-6 [&_pre]:!m-0 [&_pre]:!bg-transparent [&_pre]:!p-0 [&_.line]:before:mr-6 [&_.line]:before:inline-block [&_.line]:before:w-8 [&_.line]:before:text-right [&_.line]:before:text-zinc-500 [&_.line]:before:content-[counter(line)] [&_.line]:before:[counter-increment:line]"
       dangerouslySetInnerHTML={{ __html: highlightedCode }}
     />
   );
