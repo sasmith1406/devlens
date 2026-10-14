@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CodeViewer from "@/components/CodeViewer";
 import {
   FolderGit2,
   Plus,
@@ -376,10 +377,11 @@ async function handleConnect() {
       )}
 
       {!isFileLoading && !fileError && (
-        <pre className="overflow-x-auto whitespace-pre-wrap break-words text-sm leading-6 text-zinc-300">
-          <code>{fileContent}</code>
-        </pre>
-      )}
+  <CodeViewer
+    code={fileContent}
+    filePath={selectedFilePath}
+  />
+)}
     </div>
   </div>
 )}
