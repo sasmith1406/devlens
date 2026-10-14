@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Copy, Check } from "lucide-react";
 import { codeToHtml } from "shiki";
 
 type CodeViewerProps = {
@@ -15,6 +16,19 @@ export default function CodeViewer({
   const [highlightedCode, setHighlightedCode] = useState("");
   const [isHighlighting, setIsHighlighting] = useState(true);
   const [highlightError, setHighlightError] = useState(false);
+  const [copied, setCopied] = useState(false);
+  async function handleCopy() {
+  try {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
+  } catch {
+    setCopied(false);
+  }
+}
 
   useEffect(() => {
     let cancelled = false;
@@ -99,9 +113,22 @@ export default function CodeViewer({
   }
 
   return (
+  <div className="space-y-3">
+    <div className="flex justify-end">
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="inline-flex items-center gap-2 rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-800"
+      >
+        {copied ? <Check size={16} /> : <Copy size={16} />}
+        {copied ? "Copied!" : "Copy code"}
+      </button>
+    </div>
+
     <div
       className="overflow-x-auto text-sm leading-6 [&_pre]:!m-0 [&_pre]:!bg-transparent [&_pre]:!p-0 [&_.line]:before:mr-6 [&_.line]:before:inline-block [&_.line]:before:w-8 [&_.line]:before:text-right [&_.line]:before:text-zinc-500 [&_.line]:before:content-[counter(line)] [&_.line]:before:[counter-increment:line]"
       dangerouslySetInnerHTML={{ __html: highlightedCode }}
     />
-  );
+  </div>
+);
 }
