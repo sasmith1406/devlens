@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Sparkles, LoaderCircle, X } from "lucide-react";
 import { codeToHtml } from "shiki";
 
 type CodeViewerProps = {
@@ -38,6 +38,10 @@ const languageLabel = languageLabels[extension] ?? "Plain text";
   const [isHighlighting, setIsHighlighting] = useState(true);
   const [highlightError, setHighlightError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [explanation, setExplanation] = useState("");
+const [isExplaining, setIsExplaining] = useState(false);
+const [explanationError, setExplanationError] = useState("");
+const [showExplanation, setShowExplanation] = useState(false);
   async function handleCopy() {
   try {
     await navigator.clipboard.writeText(code);
@@ -50,6 +54,49 @@ const languageLabel = languageLabels[extension] ?? "Plain text";
     setCopied(false);
   }
 }
+
+async function handleExplainCode() {
+  setIsExplaining(true);
+  setExplanationError("");
+  setExplanation("");
+  setShowExplanation(true);
+
+  try {
+    const response = await fetch(
+      "http://localhost:5000/api/ai/explain",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code,
+          filename: fileName,
+          language: languageLabel,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message || "Failed to explain the code."
+      );
+    }
+
+    setExplanation(data.explanation);
+  } catch (error) {
+    setExplanationError(
+      error instanceof Error
+        ? error.message
+        : "Something went wrong. Please try again."
+    );
+  } finally {
+    setIsExplaining(false);
+  }
+}
+
 
   useEffect(() => {
     let cancelled = false;
@@ -155,21 +202,77 @@ const languageLabel = languageLabels[extension] ?? "Plain text";
     </span>
   </div>
 </div>
-    <div className="flex justify-end">
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="inline-flex items-center gap-2 rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-800"
-      >
-        {copied ? <Check size={16} /> : <Copy size={16} />}
-        {copied ? "Copied!" : "Copy code"}
-      </button>
-    </div>
+    
+<div className="flex flex-wrap justify-end gap-2">
+  <button
+    type="button"
+    onClick={handleExplainCode}
+    disabled={isExplaining}
+    className="inline-flex items-center gap-2 rounded-md bg-violet-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
+  >
+    {isExplaining ? (
+      <LoaderCircle size={16} className="animate-spin" />
+    ) : (
+      <Sparkles size={16} />
+    )}
+    {isExplaining ? "Explaining..." : "Explain Code"}
+  </button>
+
+  <button
+    type="button"
+    onClick={handleCopy}
+    className="inline-flex items-center gap-2 rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 transition hover:bg-zinc-800"
+  >
+    {copied ? <Check size={16} /> : <Copy size={16} />}
+    {copied ? "Copied!" : "Copy code"}
+  </button>
+</div>
+
 
     <div
       className="overflow-x-auto text-sm leading-6 [&_pre]:!m-0 [&_pre]:!bg-transparent [&_pre]:!p-0 [&_.line]:before:mr-6 [&_.line]:before:inline-block [&_.line]:before:w-8 [&_.line]:before:text-right [&_.line]:before:text-zinc-500 [&_.line]:before:content-[counter(line)] [&_.line]:before:[counter-increment:line]"
       dangerouslySetInnerHTML={{ __html: highlightedCode }}
     />
+    
+{showExplanation && (
+  <section className="rounded-xl border border-violet-500/30 bg-zinc-900/70 p-4 sm:p-5">
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <h3 className="flex items-center gap-2 font-semibold text-zinc-100">
+        <Sparkles size={18} className="text-violet-400" />
+        AI Code Explanation
+      </h3>
+
+      <button
+        type="button"
+        onClick={() => setShowExplanation(false)}
+        aria-label="Close explanation"
+        className="rounded-md p-1 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+      >
+        <X size={18} />
+      </button>
+    </div>
+
+    {isExplaining && (
+      <p className="flex items-center gap-2 text-sm text-zinc-400">
+        <LoaderCircle size={16} className="animate-spin" />
+        Gemini is analyzing your code...
+      </p>
+    )}
+
+    {explanationError && (
+      <p className="text-sm text-red-400">
+        {explanationError}
+      </p>
+    )}
+
+    {explanation && (
+      <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-zinc-300">
+        {explanation}
+      </pre>
+    )}
+  </section>
+)}
+
   </div>
 );
 }

@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import repositoryRoutes from "./routes/repositoryRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(express.json());
 
 // Register repository API routes
 app.use("/api/repositories", repositoryRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (_req, res) => {
   res.json({
