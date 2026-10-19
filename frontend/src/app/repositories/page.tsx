@@ -51,6 +51,7 @@ const [isTreeLoading, setIsTreeLoading] = useState(false);
 const [treeError, setTreeError] = useState("");
 const [selectedFilePath, setSelectedFilePath] = useState("");
 const [fileContent, setFileContent] = useState("");
+const [fileSearch, setFileSearch] = useState("");
 const [isFileLoading, setIsFileLoading] = useState(false);
 const [fileError, setFileError] = useState("");
 
@@ -141,7 +142,10 @@ const fetchFileContent = async (repo: Repository, path: string) => {
     setIsFileLoading(false);
   }
 };
-
+const filteredFiles =
+  repositoryTree?.entries.filter((file) =>
+    file.path.toLowerCase().includes(fileSearch.toLowerCase())
+  ) ?? [];
 useEffect(() => {
   void fetchRepositories();
 }, []);
@@ -318,42 +322,66 @@ async function handleConnect() {
           )}
 
           {repositoryTree && (
-            <div className="mt-4 space-y-2">
-              <p className="mb-3 text-sm text-zinc-400">
-                {repositoryTree.entries.length} entries found
-              </p>
+  <div className="mt-4 space-y-2">
+    <div className="mb-4">
+      <label
+        htmlFor="fileSearch"
+        className="mb-2 block text-sm font-medium text-zinc-300"
+      >
+        Search repository files
+      </label>
 
-              {repositoryTree.entries.map((file) => (
-                <div
-  key={file.path}
-  onClick={() => {
-    if (file.type === "blob" && selectedRepo) {
-      void fetchFileContent(selectedRepo, file.path);
-    }
-  }}
-  className={`flex items-center justify-between gap-4 rounded-lg border border-zinc-800 px-4 py-3 ${
-    file.type === "blob"
-      ? "cursor-pointer transition hover:bg-zinc-800"
-      : ""
-  }`}
->
-  <span className="break-all text-sm text-zinc-200">
-    {file.type === "tree" ? "📁" : "📄"} {file.path}
-  </span>
+      <input
+        id="fileSearch"
+        type="text"
+        value={fileSearch}
+        onChange={(event) => setFileSearch(event.target.value)}
+        placeholder="Search by file name or path..."
+        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-blue-500"
+      />
 
-  <span className="shrink-0 text-xs text-zinc-500">
-    {file.type}
-  </span>
-</div>
-              ))}
+      <p className="mt-2 text-xs text-zinc-500">
+        Showing {filteredFiles.length} of {repositoryTree.entries.length} entries
+      </p>
+    </div>
 
-              {repositoryTree.truncated && (
-                <p className="pt-2 text-sm text-amber-400">
-                  GitHub returned a truncated file tree. Some entries may be missing.
-                </p>
-              )}
-            </div>
-          )}
+    {filteredFiles.length === 0 && (
+      <p className="py-6 text-center text-sm text-zinc-500">
+        No files match your search.
+      </p>
+    )}
+
+    {filteredFiles.map((file) => (
+      <div
+        key={file.path}
+        onClick={() => {
+          if (file.type === "blob" && selectedRepo) {
+            void fetchFileContent(selectedRepo, file.path);
+          }
+        }}
+        className={`flex items-center justify-between gap-4 rounded-lg border border-zinc-800 px-4 py-3 ${
+          file.type === "blob"
+            ? "cursor-pointer transition hover:bg-zinc-800"
+            : ""
+        }`}
+      >
+        <span className="break-all text-sm text-zinc-200">
+          {file.type === "tree" ? "📁" : "📄"} {file.path}
+        </span>
+
+        <span className="shrink-0 text-xs text-zinc-500">
+          {file.type}
+        </span>
+      </div>
+    ))}
+
+    {repositoryTree.truncated && (
+      <p className="pt-2 text-sm text-amber-400">
+        GitHub returned a truncated file tree. Some entries may be missing.
+      </p>
+    )}
+  </div>
+)}
           {/* Selected File Content */}
 {selectedFilePath && (
   <div className="mt-6 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-950">
