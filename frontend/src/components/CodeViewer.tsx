@@ -42,6 +42,10 @@ const languageLabel = languageLabels[extension] ?? "Plain text";
 const [isExplaining, setIsExplaining] = useState(false);
 const [explanationError, setExplanationError] = useState("");
 const [showExplanation, setShowExplanation] = useState(false);
+const [review, setReview] = useState("");
+const [isReviewing, setIsReviewing] = useState(false);
+const [reviewError, setReviewError] = useState("");
+const [showReview, setShowReview] = useState(false);
   async function handleCopy() {
   try {
     await navigator.clipboard.writeText(code);
@@ -96,6 +100,50 @@ async function handleExplainCode() {
     setIsExplaining(false);
   }
 }
+
+
+async function handleReviewCode() {
+  setIsReviewing(true);
+  setReviewError("");
+  setReview("");
+  setShowReview(true);
+
+  try {
+    const response = await fetch(
+      "http://localhost:5000/api/ai/review",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code,
+          filename: fileName,
+          language: languageLabel,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message || "Failed to review the code."
+      );
+    }
+
+    setReview(data.review);
+  } catch (error) {
+    setReviewError(
+      error instanceof Error
+        ? error.message
+        : "Something went wrong. Please try again."
+    );
+  } finally {
+    setIsReviewing(false);
+  }
+}
+
 
 
   useEffect(() => {
@@ -218,6 +266,22 @@ async function handleExplainCode() {
     {isExplaining ? "Explaining..." : "Explain Code"}
   </button>
 
+  
+<button
+  type="button"
+  onClick={handleReviewCode}
+  disabled={isReviewing}
+  className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {isReviewing ? (
+    <LoaderCircle size={16} className="animate-spin" />
+  ) : (
+    <Sparkles size={16} />
+  )}
+  {isReviewing ? "Reviewing..." : "Review Code"}
+</button>
+
+
   <button
     type="button"
     onClick={handleCopy}
@@ -272,6 +336,47 @@ async function handleExplainCode() {
     )}
   </section>
 )}
+
+
+{showReview && (
+  <section className="rounded-xl border border-emerald-500/30 bg-zinc-900/70 p-4 sm:p-5">
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <h3 className="flex items-center gap-2 font-semibold text-zinc-100">
+        <Sparkles size={18} className="text-emerald-400" />
+        AI Code Review
+      </h3>
+
+      <button
+        type="button"
+        onClick={() => setShowReview(false)}
+        aria-label="Close code review"
+        className="rounded-md p-1 text-zinc-400 transition hover:bg-zinc-800 hover:text-white"
+      >
+        <X size={18} />
+      </button>
+    </div>
+
+    {isReviewing && (
+      <p className="flex items-center gap-2 text-sm text-zinc-400">
+        <LoaderCircle size={16} className="animate-spin" />
+        Gemini is reviewing your code...
+      </p>
+    )}
+
+    {reviewError && (
+      <p className="text-sm text-red-400">
+        {reviewError}
+      </p>
+    )}
+
+    {review && (
+      <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-zinc-300">
+        {review}
+      </pre>
+    )}
+  </section>
+)}
+
 
   </div>
 );
