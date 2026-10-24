@@ -3,6 +3,15 @@ import { Router } from "express";
 import { Prisma } from "../generated/prisma/client.js";
 import { prisma } from "../lib/prisma.js";
 
+// Reusable headers for authenticated GitHub API requests.
+const getGitHubHeaders = () => ({
+  Accept: "application/vnd.github+json",
+  "User-Agent": "DevLens",
+  ...(process.env.GITHUB_TOKEN
+    ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+    : {}),
+});
+
 const router = Router();
 
 // GET /api/repositories
@@ -55,10 +64,7 @@ router.get("/:id/files", async (req, res) => {
       });
     }
 
-    const headers = {
-      Accept: "application/vnd.github+json",
-      "User-Agent": "DevLens",
-    };
+    const headers = getGitHubHeaders();
 
     // Get the repository's default branch from GitHub.
     const repoResponse = await fetch(
@@ -200,10 +206,7 @@ try {
   }
 
   
-const headers = {
-  Accept: "application/vnd.github+json",
-  "User-Agent": "DevLens",
-};
+const headers = getGitHubHeaders();
 
 // Request the selected file from GitHub.
 const githubResponse = await fetch(
@@ -371,10 +374,7 @@ router.post("/", async (req, res) => {
     githubResponse = await fetch(
       `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
       {
-        headers: {
-          Accept: "application/vnd.github+json",
-          "User-Agent": "DevLens",
-        },
+        headers: getGitHubHeaders(),
         signal: AbortSignal.timeout(5000),
       },
     );
